@@ -27,15 +27,19 @@ int main(int argc, char **argv) {
     struct sockaddr_in serveraddr;
     struct hostent *server;
     char *hostname;
+    char *filename;
     char buf[BUFSIZE];
 
     /* check command line arguments */
-    if (argc != 3) {
-       fprintf(stderr,"usage: %s <hostname> <port>\n", argv[0]);
+    if (argc != 4) {
+       fprintf(stderr,"usage: %s <hostname> <port> <filename>\n", argv[0]);
        exit(0);
     }
     hostname = argv[1];
     portno = atoi(argv[2]);
+    filename = argv[3];
+
+    printf("hostname: %s\nportno: %d\nfilename: %s\n", hostname, portno, filename);
 
     /* socket: create the socket */
     sockfd = socket(AF_INET, SOCK_DGRAM, 0);
