@@ -41,14 +41,17 @@ const int RST = 3;
 const int SYN = 4;
 const int FIN = 5;
 
-int getControl(const char buf[]) {
-  char* controlBits = buf+CONTROL;
-  return *((int *) controlBits);
-}
-
 int getBit(const char buf[], const int bit) {
-  int control = getControl;
+  int control = buf[CONTROL];
   return (control >> bit) & 1;
+}
+void setBit(char buf[], const int bit, const int val) {
+  if (val){
+    buf[CONTROL] |= (1 << bit);
+  }
+  else {
+    buf[CONTROL] &= (0xFFFFFFFF ^ (1 << bit));
+  }
 }
 
 
@@ -117,7 +120,7 @@ int main(int argc, char **argv) {
 		 (struct sockaddr *) &clientaddr, &clientlen);
     if (n > 0) {
       if (getBit(buf, SYN)) {
-        
+        bzero(buf+)
       }
       // We need to respond to packet
       /* 
