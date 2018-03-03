@@ -11,7 +11,7 @@
 #include <netinet/in.h>
 #include <netdb.h> 
 
-#define BUFSIZE 1024
+#define BUFSIZE 20 
 
 /* 
  * error - wrapper for perror
@@ -21,6 +21,24 @@ void error(char *msg) {
     exit(0);
 }
 
+const int SOURCE_PORT = 0;
+const int DEST_PORT = 2;
+const int SEQ_NUM = 4;
+const int ACK_NUM = 8;
+const int DATA_OFFSET = 12;
+const int CONTROL = 13;
+const int WINDOW = 14;
+const int CHECKSUM = 16;
+const int URGENT_PTR = 18;
+
+// Flags
+const int URG = 0;
+const int ACK = 1;
+const int PSH = 2;
+const int RST = 3;
+const int SYN = 4;
+const int FIN = 5;
+
 int main(int argc, char **argv) {
     int sockfd, portno, n;
     int serverlen;
@@ -28,7 +46,7 @@ int main(int argc, char **argv) {
     struct hostent *server;
     char *hostname;
     char *filename;
-    char buf[BUFSIZE];
+    char buf[BUFSIZE]; // 20 bytes for "TCP" header.
 
     /* check command line arguments */
     if (argc != 4) {
@@ -60,10 +78,26 @@ int main(int argc, char **argv) {
 	  (char *)&serveraddr.sin_addr.s_addr, server->h_length);
     serveraddr.sin_port = htons(portno);
 
+
+
+
     /* get a message from the user */
+    // build SYN msg here to initiate handshake w/ Server
     bzero(buf, BUFSIZE);
     printf("Please enter msg: ");
     fgets(buf, BUFSIZE, stdin);
+
+    // Listen for server return msg
+    // while ( !msgRcvd ) {
+    //       if (currTime >= lastTime + 2 * timeout)
+    //              sendSyn
+    //       listen for server msg 
+    //       
+    // }
+    
+
+
+
 
     /* send the message to the server */
     serverlen = sizeof(serveraddr);

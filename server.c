@@ -23,6 +23,7 @@ void error(char *msg) {
   exit(1);
 }
 
+// Header Offsets
 const int SOURCE_PORT = 0;
 const int DEST_PORT = 2;
 const int SEQ_NUM = 4;
@@ -33,7 +34,7 @@ const int WINDOW = 14;
 const int CHECKSUM = 16;
 const int URGENT_PTR = 18;
 
-// Flags
+// Flags (bit offsets)
 const int URG = 0;
 const int ACK = 1;
 const int PSH = 2;
