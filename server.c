@@ -13,7 +13,7 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 
-#define BUFSIZE 1025
+#define BUFSIZE 1024
 
 /*
  * error - wrapper for perror
@@ -41,11 +41,32 @@ const int RST = 3;
 const int SYN = 4;
 const int FIN = 5;
 
-int getBit(const char buf[], const int bit) {
-  int control = buf[CONTROL];
+unsigned int get4Bytes(const char buf[], const int offset) {
+  unsigned int* ptr = (unsigned int *) (buf + offset);
+  return *ptr;
+}
+
+void set4Bytes(char buf[], const int offset, const unsigned int val) {
+  unsigned int* ptr = (unsigned int *) (buf + offset);
+  *ptr = val;
+}
+
+short get2Bytes(const char buf[], const int offset) {
+  short* ptr = (short *) (buf + offset);
+  return *ptr;
+}
+
+void set2Bytes(char buf[], const int offset, const short val) {
+  short* ptr = (short *) (buf + offset);
+  *ptr = val;
+}
+
+char getBit(const char buf[], const int bit) {
+  unsigned char control = buf[CONTROL];
   return (control >> bit) & 1;
 }
-void setBit(char buf[], const int bit, const int val) {
+
+void setBit(char buf[], const int bit, const char val) {
   if (val){
     buf[CONTROL] |= (1 << bit);
   }
@@ -66,6 +87,8 @@ int main(int argc, char **argv) {
   char *hostaddrp; /* dotted decimal host addr string */
   int optval; /* flag value for setsockopt */
   int n; /* message byte size */
+  int windowSize = 5;
+  int currSeq;
 
   /* 
    * check command line arguments 
@@ -119,9 +142,13 @@ int main(int argc, char **argv) {
     n = recvfrom(sockfd, buf, BUFSIZE, MSG_DONTWAIT,
 		 (struct sockaddr *) &clientaddr, &clientlen);
     if (n > 0) {
-      if (getBit(buf, SYN)) {
-        bzero(buf+)
+      if (getBit(buf, SYN) && !getBit(buf, ACK)) {
+        setBit(buf, ACK, 1);
       }
+      else if (getBit(buf, ACK)) {
+        int ackNum = 
+      }
+
       // We need to respond to packet
       /* 
        * gethostbyaddr: determine who sent the datagram
