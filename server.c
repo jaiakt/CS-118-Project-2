@@ -53,12 +53,12 @@ void set4Bytes(char buf[], const int offset, const unsigned int val) {
 }
 
 short get2Bytes(const char buf[], const int offset) {
-  short* ptr = (short *) (buf + offset);
+  unsigned short* ptr = (unsigned short *) (buf + offset);
   return *ptr;
 }
 
-void set2Bytes(char buf[], const int offset, const short val) {
-  short* ptr = (short *) (buf + offset);
+void set2Bytes(char buf[], const int offset, const unsigned short val) {
+  unsigned short* ptr = (unsigned short *) (buf + offset);
   *ptr = val;
 }
 
