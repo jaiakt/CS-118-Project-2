@@ -11,3 +11,6 @@ server: server.o
 	gcc -o server server.o -I.
 client: client.o 
 	gcc -o client client.o -I.
+
+clean:
+	rm server client *.o
