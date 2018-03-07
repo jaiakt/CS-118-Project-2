@@ -10,6 +10,7 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <netdb.h> 
+#include "utilities.h"
 
 #define BUFSIZE 20 
 
@@ -21,23 +22,6 @@ void error(char *msg) {
     exit(0);
 }
 
-const int SOURCE_PORT = 0;
-const int DEST_PORT = 2;
-const int SEQ_NUM = 4;
-const int ACK_NUM = 8;
-const int DATA_OFFSET = 12;
-const int CONTROL = 13;
-const int WINDOW = 14;
-const int CHECKSUM = 16;
-const int URGENT_PTR = 18;
-
-// Flags
-const int URG = 0;
-const int ACK = 1;
-const int PSH = 2;
-const int RST = 3;
-const int SYN = 4;
-const int FIN = 5;
 
 int main(int argc, char **argv) {
     int sockfd, portno, n;
@@ -47,6 +31,8 @@ int main(int argc, char **argv) {
     char *hostname;
     char *filename;
     char buf[BUFSIZE]; // 20 bytes for "TCP" header.
+
+ 
 
     /* check command line arguments */
     if (argc != 4) {
@@ -79,13 +65,10 @@ int main(int argc, char **argv) {
     serveraddr.sin_port = htons(portno);
 
 
-
-
-    /* get a message from the user */
-    // build SYN msg here to initiate handshake w/ Server
-    bzero(buf, BUFSIZE);
-    printf("Please enter msg: ");
-    fgets(buf, BUFSIZE, stdin);
+    unsigned int client_isn = 2048; // needs randomize
+    unsigned int server_isn = 0;
+    unsigned int ackNum = 0;
+    unsigned int synNum = 1;
 
     // Listen for server return msg
     // while ( !msgRcvd ) {
@@ -94,21 +77,31 @@ int main(int argc, char **argv) {
     //       listen for server msg 
     //       
     // }
-    
-
-
-
+    /* user send connection request */
+    bzero(buf, BUFSIZE);
+    setBit(buf, SYN, 1);
+    set4Bytes(buf, SEQ_NUM, client_isn);
 
     /* send the message to the server */
     serverlen = sizeof(serveraddr);
     n = sendto(sockfd, buf, strlen(buf), 0, &serveraddr, serverlen);
+    printf("Sending packet %d %s\n", seqNum, message)
     if (n < 0) 
       error("ERROR in sendto");
     
     /* print the server's reply */
-    n = recvfrom(sockfd, buf, strlen(buf), 0, &serveraddr, &serverlen);
-    if (n < 0) 
-      error("ERROR in recvfrom");
-    printf("Echo from server: %s", buf);
+
+    while(1) {
+
+        n = recvfrom(sockfd, buf, strlen(buf), MSG_DONTWAIT, &serveraddr, &serverlen);
+        if (n >= 0) {
+          printf("Receiving packet %d", get4Byets(buf, SEQ_NUM));
+          synNum = getBit(buf, SYN);
+          if (synNum == 1)
+            
+        server_isn = get4Bytes(buf, SEQ_NUM);
+        ackNum = get4Bytes(buf, ACK_NUM);
+    }
+
     return 0;
 }
