@@ -32,13 +32,12 @@ int main(int argc, char **argv) {
     char *filename;
     char buf[BUFSIZE]; // 20 bytes for "TCP" header.
 
- 
-
     /* check command line arguments */
     if (argc != 4) {
        fprintf(stderr,"usage: %s <hostname> <port> <filename>\n", argv[0]);
        exit(0);
     }
+    srand(time(NULL));
     hostname = argv[1];
     portno = atoi(argv[2]);
     filename = argv[3];
@@ -69,7 +68,7 @@ int main(int argc, char **argv) {
     unsigned int server_isn = 0;
     unsigned int ackNum = 0;
     unsigned int synNum = 1;
-    unsigned int seqNum = client_isn + BUFSIZE;
+    unsigned int seqNum = client_isn;
 
     // Listen for server return msg
     // while ( !msgRcvd ) {
@@ -85,7 +84,7 @@ int main(int argc, char **argv) {
 
     /* send the message to the server */
     serverlen = sizeof(serveraddr);
-    n = sendto(sockfd, buf, strlen(buf), 0, (struct sockaddr *) &serveraddr, serverlen);
+    n = sendto(sockfd, buf, BUFSIZE, 0, (struct sockaddr *) &serveraddr, serverlen);
     printf("Sending packet %d %s\n", seqNum, "SYN");
     if (n < 0) 
       error("ERROR in sendto");
@@ -94,7 +93,7 @@ int main(int argc, char **argv) {
 
     while(1) {
       bzero(buf, BUFSIZE);
-      n = recvfrom(sockfd, buf, strlen(buf), MSG_DONTWAIT, (struct sockaddr *) &serveraddr, (socklen_t *) &serverlen);
+      n = recvfrom(sockfd, buf, BUFSIZE, MSG_DONTWAIT, (struct sockaddr *) &serveraddr, (socklen_t *) &serverlen);
       if (n > 0) {
         server_isn = get4Bytes(buf, SEQ_NUM);
         printf("Receiving packet %d\n", server_isn);
@@ -112,12 +111,15 @@ int main(int argc, char **argv) {
         // Create final client response msg with sungle ACK packet.
         bzero(buf, BUFSIZE);
         setBit(buf, ACK, 1);
-        set4Bytes(buf, SEQ_NUM, ackNum);
-        n = sendto(sockfd, buf, strlen(buf), 0, (struct sockaddr *) &serveraddr, serverlen);
+        set4Bytes(buf, ACK_NUM, server_isn+1);
+        n = sendto(sockfd, buf, BUFSIZE, 0, (struct sockaddr *) &serveraddr, serverlen);
         printf("Sending packet %d %s\n", ackNum, "ACK");
-
+        if (n > 0) {
+            break;
+        }
       }     
     }
+    // todo: Start receiving packets
 
     return 0;
 }

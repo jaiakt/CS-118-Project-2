@@ -56,13 +56,21 @@ void setBit(char buf[], const int bit, const char val) {
   }
 }
 
-long getCurrentTime (void)
-{
-    struct timespec spec;
+long getCurrentTime() {
+  struct timespec spec;
 
-    clock_gettime(CLOCK_REALTIME, &spec);
+  clock_gettime(CLOCK_REALTIME, &spec);
 
-    return (spec.tv_sec) * 1000 + (spec.tv_nsec) / 1000000 ;
+  return (spec.tv_sec) * 1000 + (spec.tv_nsec) / 1000000 ;
+}
+
+void printHeader(char* buf) {
+  for (int i = 0; i < 5; ++i) {
+    for (int j = 0; j < 4; ++j) {
+      printf("%hhx\t", buf[i*4 + j]);
+    }
+    printf("\n");
+  }
 }
 
 #endif

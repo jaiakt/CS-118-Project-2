@@ -33,6 +33,9 @@ int main(int argc, char **argv) {
     fprintf(stderr, "usage: %s <port>\n", argv[0]);
     exit(1);
   }
+
+  srand(time(NULL));
+
   int portno = atoi(argv[1]);
 
   /* 
@@ -98,20 +101,25 @@ int main(int argc, char **argv) {
         int temp = get4Bytes(buf, SEQ_NUM);
         set4Bytes(buf, ACK_NUM, temp + 1);
         set4Bytes(buf, SEQ_NUM, randNum);
-        n = sendto(sockfd, buf, strlen(buf), 0, 
+        n = sendto(sockfd, buf, BUFSIZE, 0, 
          (struct sockaddr *) &clientaddr, clientlen);
-        printf("Sending packet %du %du SYN\n", SEQ_NUM, windowSize);
+        printf("Sending packet %d %d SYN\n", SEQ_NUM, windowSize);
         if (n < 0) {
           error("error with sending syn-ack");
         }
       }
       else if (getBit(buf, ACK)) {
         currSeq = get4Bytes(buf, ACK_NUM);
+        printf("Receiving packet %d\n", currSeq);
         assert(currSeq == randNum+1);
         break;
       } 
     }
   }
+
+  // Handshake complete
+  return 0;
+
   while (1) {
     /*
      * recvfrom: receive a UDP datagram from a client
@@ -145,7 +153,7 @@ int main(int argc, char **argv) {
         timeouts[seq / PACKET_SIZE] = currentTime + TIMEOUT;
       }
     }
-    n = sendto(sockfd, buf, strlen(buf), 0, 
+    n = sendto(sockfd, buf, BUFSIZE, 0, 
          (struct sockaddr *) &clientaddr, clientlen);
     if (n < 0) 
       error("ERROR in sendto");
