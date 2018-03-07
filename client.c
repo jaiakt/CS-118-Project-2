@@ -85,7 +85,7 @@ int main(int argc, char **argv) {
 
     /* send the message to the server */
     serverlen = sizeof(serveraddr);
-    n = sendto(sockfd, buf, strlen(buf), 0, &serveraddr, serverlen);
+    n = sendto(sockfd, buf, strlen(buf), 0, (struct sockaddr *) &serveraddr, serverlen);
     printf("Sending packet %d %s\n", seqNum, "SYN");
     if (n < 0) 
       error("ERROR in sendto");
@@ -94,16 +94,16 @@ int main(int argc, char **argv) {
 
     while(1) {
       bzero(buf, BUFSIZE);
-      n = recvfrom(sockfd, buf, strlen(buf), MSG_DONTWAIT, &serveraddr, &serverlen);
+      n = recvfrom(sockfd, buf, strlen(buf), MSG_DONTWAIT, (struct sockaddr *) &serveraddr, (socklen_t *) &serverlen);
       if (n >= 0) {
         server_isn = get4Bytes(buf, SEQ_NUM);
         printf("Receiving packet %d\n", server_isn);
-        synBit = getBit(buf, SYN);
+        int synBit = getBit(buf, SYN);
         if (synBit != 1)
 
           error("Unable to establish handshake. Bad SYN bit.\n");
 
-        ackBit = getBit(buf, ACK);
+        int ackBit = getBit(buf, ACK);
         if (ackBit == 1)
           ackNum = get4Bytes(buf, ACK_NUM);
         else
@@ -113,7 +113,7 @@ int main(int argc, char **argv) {
         bzero(buf, BUFSIZE);
         setBit(buf, ACK, 1);
         set4Bytes(buf, SEQ_NUM, ackNum);
-        n = sendto(sockfd, buf, strlen(buf), 0, &serveraddr, serverlen);
+        n = sendto(sockfd, buf, strlen(buf), 0, (struct sockaddr *) &serveraddr, serverlen);
         printf("Sending packet %d %s\n", ackNum, "ACK");
 
       }     
