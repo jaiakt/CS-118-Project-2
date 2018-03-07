@@ -12,6 +12,7 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
+#include "utilities.h"
 
 #define BUFSIZE 1024
 
@@ -23,74 +24,7 @@ void error(char *msg) {
   exit(1);
 }
 
-// Header Offsets
-const int SOURCE_PORT = 0;
-const int DEST_PORT = 2;
-const int SEQ_NUM = 4;
-const int ACK_NUM = 8;
-const int DATA_OFFSET = 12;
-const int CONTROL = 13;
-const int WINDOW = 14;
-const int CHECKSUM = 16;
-const int URGENT_PTR = 18;
-
-// Flags (bit offsets)
-const int URG = 0;
-const int ACK = 1;
-const int PSH = 2;
-const int RST = 3;
-const int SYN = 4;
-const int FIN = 5;
-
-unsigned int get4Bytes(const char buf[], const int offset) {
-  unsigned int* ptr = (unsigned int *) (buf + offset);
-  return *ptr;
-}
-
-void set4Bytes(char buf[], const int offset, const unsigned int val) {
-  unsigned int* ptr = (unsigned int *) (buf + offset);
-  *ptr = val;
-}
-
-short get2Bytes(const char buf[], const int offset) {
-  unsigned short* ptr = (unsigned short *) (buf + offset);
-  return *ptr;
-}
-
-void set2Bytes(char buf[], const int offset, const unsigned short val) {
-  unsigned short* ptr = (unsigned short *) (buf + offset);
-  *ptr = val;
-}
-
-char getBit(const char buf[], const int bit) {
-  unsigned char control = buf[CONTROL];
-  return (control >> bit) & 1;
-}
-
-void setBit(char buf[], const int bit, const char val) {
-  if (val){
-    buf[CONTROL] |= (1 << bit);
-  }
-  else {
-    buf[CONTROL] &= (0xFFFFFFFF ^ (1 << bit));
-  }
-}
-
-
 int main(int argc, char **argv) {
-  int sockfd; /* socket */
-  int portno; /* port to listen on */
-  int clientlen; /* byte size of client's address */
-  struct sockaddr_in serveraddr; /* server's addr */
-  struct sockaddr_in clientaddr; /* client addr */
-  struct hostent *hostp; /* client host info */
-  char buf[BUFSIZE]; /* message buf */
-  char *hostaddrp; /* dotted decimal host addr string */
-  int optval; /* flag value for setsockopt */
-  int n; /* message byte size */
-  int windowSize = 5;
-  int currSeq;
-
   /* 
    * check command line arguments 
    */
@@ -98,12 +32,12 @@ int main(int argc, char **argv) {
     fprintf(stderr, "usage: %s <port>\n", argv[0]);
     exit(1);
   }
-  portno = atoi(argv[1]);
+  int portno = atoi(argv[1]);
 
   /* 
    * socket: create the parent socket 
    */
-  sockfd = socket(AF_INET, SOCK_DGRAM, 0);
+  int sockfd = socket(AF_INET, SOCK_DGRAM, 0);
   if (sockfd < 0) 
     error("ERROR opening socket");
 
@@ -112,13 +46,14 @@ int main(int argc, char **argv) {
    * otherwise we have to wait about 20 secs. 
    * Eliminates "ERROR on binding: Address already in use" error. 
    */
-  optval = 1;
+  int optval = 1;
   setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, 
 	     (const void *)&optval , sizeof(int));
 
   /*
    * build the server's Internet address
    */
+  struct sockaddr_in serveraddr; /* server's addr */
   bzero((char *) &serveraddr, sizeof(serveraddr));
   serveraddr.sin_family = AF_INET;
   serveraddr.sin_addr.s_addr = htonl(INADDR_ANY);
@@ -134,44 +69,63 @@ int main(int argc, char **argv) {
   /* 
    * main loop: wait for a datagram, then echo it
    */
-  clientlen = sizeof(clientaddr);
+  struct sockaddr_in clientaddr; /* client addr */
+  unsigned int clientlen = sizeof(clientaddr);
+  struct hostent *hostp; /* client host info */
+  char buf[BUFSIZE]; /* message buf */
+  char *hostaddrp; /* dotted decimal host addr string */
+  const int PACKET_SIZE = 1024;
+  const int HEADER_SIZE = 20;
+  const int PAYLOAD_SIZE = PACKET_SIZE - HEADER_SIZE;
+  int windowSize = 5 * PACKET_SIZE;
+  const int MAX_SEQ = 30 * PACKET_SIZE;
+  long timeouts[MAX_SEQ];
+  for (int i = 0; i < MAX_SEQ; ++i) {
+    timeouts[i] = 0;
+  }
+  int cumSeq = 0;
+  int currSeq;
   while (1) {
     /*
      * recvfrom: receive a UDP datagram from a client
      */
     bzero(buf, BUFSIZE);
-    n = recvfrom(sockfd, buf, BUFSIZE, MSG_DONTWAIT,
+    int n = recvfrom(sockfd, buf, BUFSIZE, MSG_DONTWAIT,
 		 (struct sockaddr *) &clientaddr, &clientlen);
     if (n > 0) {
       if (getBit(buf, SYN) && !getBit(buf, ACK)) {
         setBit(buf, ACK, 1);
+        set4Bytes(buf, ACK_NUM, get4Bytes(buf, SEQ_NUM) + 1);
+        set4Bytes(buf, SEQ_NUM, 0);
       }
       else if (getBit(buf, ACK)) {
-        int ackNum = 
+        int seqNum = get4Bytes(buf, SEQ_NUM);
+        timeouts[seqNum / PACKET_SIZE] = 0;
+        currSeq = get4Bytes(buf, ACK_NUM);
       }
-
-      // We need to respond to packet
+    }
+    // HANDLE TIMEOUTS
+    // We need to respond to packet
       /* 
        * gethostbyaddr: determine who sent the datagram
        */
       hostp = gethostbyaddr((const char *)&clientaddr.sin_addr.s_addr, 
-  			  sizeof(clientaddr.sin_addr.s_addr), AF_INET);
+          sizeof(clientaddr.sin_addr.s_addr), AF_INET);
       if (hostp == NULL)
         error("ERROR on gethostbyaddr");
       hostaddrp = inet_ntoa(clientaddr.sin_addr);
       if (hostaddrp == NULL)
         error("ERROR on inet_ntoa\n");
       printf("server received datagram from %s (%s)\n", 
-  	   hostp->h_name, hostaddrp);
-      printf("server received %d/%d bytes: %s\n", strlen(buf), n, buf);
+       hostp->h_name, hostaddrp);
+      printf("server received %lu/%d bytes: %s\n", strlen(buf), n, buf);
       
       /* 
        * sendto: echo the input back to the client 
        */
       n = sendto(sockfd, buf, strlen(buf), 0, 
-  	       (struct sockaddr *) &clientaddr, clientlen);
+           (struct sockaddr *) &clientaddr, clientlen);
       if (n < 0) 
         error("ERROR in sendto");
-    }
   }
 }
