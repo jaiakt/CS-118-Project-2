@@ -97,10 +97,16 @@ int main(int argc, char **argv) {
         setBit(buf, ACK, 1);
         set4Bytes(buf, ACK_NUM, get4Bytes(buf, SEQ_NUM) + 1);
         set4Bytes(buf, SEQ_NUM, randNum);
+        n = sendto(sockfd, buf, strlen(buf), 0, 
+         (struct sockaddr *) &clientaddr, clientlen);
+        if (n < 0) {
+          error("error with sending syn-ack");
+        }
       }
       else if (getBit(buf, ACK)) {
         currSeq = get4Bytes(buf, ACK_NUM);
         assert(currSeq == randNum+1);
+        break;
       } 
     }
   }
@@ -130,10 +136,12 @@ int main(int argc, char **argv) {
      */
     for (int i = 0; i < windowSize; i += PACKET_SIZE) {
       int seq = (currSeq + i) % MAX_SEQ;
+      long currentTime = getCurrentTime();
       if (timeouts[seq / PACKET_SIZE] == 0) {
         // todo: send packet
-        timeouts[seq / PACKET_SIZE] = getCurrentTime() + TIMEOUT;
+        timeouts[seq / PACKET_SIZE] = currentTime + TIMEOUT;
       }
+      if ()
     }
     n = sendto(sockfd, buf, strlen(buf), 0, 
          (struct sockaddr *) &clientaddr, clientlen);
