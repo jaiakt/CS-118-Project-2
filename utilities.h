@@ -1,5 +1,8 @@
 #ifndef UTILITIES_H
 #define UTILITIES_H
+
+#include <time.h>
+
 // Header Offsets
 const int SOURCE_PORT = 0;
 const int DEST_PORT = 2;
@@ -52,4 +55,14 @@ void setBit(char buf[], const int bit, const char val) {
     buf[CONTROL] &= (0xFFFFFFFF ^ (1 << bit));
   }
 }
+
+long getCurrentTime (void)
+{
+    struct timespec spec;
+
+    clock_gettime(CLOCK_REALTIME, &spec);
+
+    return (spec.tv_sec) * 1000 + (spec.tv_nsec) / 1000000 ;
+}
+
 #endif

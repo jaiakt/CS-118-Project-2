@@ -12,6 +12,7 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
+#include <assert.h>
 #include "utilities.h"
 
 #define BUFSIZE 1024
@@ -80,11 +81,29 @@ int main(int argc, char **argv) {
   int windowSize = 5 * PACKET_SIZE;
   const int MAX_SEQ = 30 * PACKET_SIZE;
   long timeouts[MAX_SEQ];
+  long TIMEOUT = 500;
   for (int i = 0; i < MAX_SEQ; ++i) {
     timeouts[i] = 0;
   }
   int cumSeq = 0;
   int currSeq;
+  unsigned int randNum = rand() % 30;
+  while(1) {
+    bzero(buf, BUFSIZE);
+    int n = recvfrom(sockfd, buf, BUFSIZE, 0,
+      (struct sockaddr *) &clientaddr, &clientlen);
+    if (n > 0) {
+      if (getBit(buf, SYN) && !getBit(buf, ACK)) {
+        setBit(buf, ACK, 1);
+        set4Bytes(buf, ACK_NUM, get4Bytes(buf, SEQ_NUM) + 1);
+        set4Bytes(buf, SEQ_NUM, randNum);
+      }
+      else if (getBit(buf, ACK)) {
+        currSeq = get4Bytes(buf, ACK_NUM);
+        assert(currSeq == randNum+1);
+      } 
+    }
+  }
   while (1) {
     /*
      * recvfrom: receive a UDP datagram from a client
@@ -105,27 +124,20 @@ int main(int argc, char **argv) {
       }
     }
     // HANDLE TIMEOUTS
-    // We need to respond to packet
-      /* 
-       * gethostbyaddr: determine who sent the datagram
-       */
-      hostp = gethostbyaddr((const char *)&clientaddr.sin_addr.s_addr, 
-          sizeof(clientaddr.sin_addr.s_addr), AF_INET);
-      if (hostp == NULL)
-        error("ERROR on gethostbyaddr");
-      hostaddrp = inet_ntoa(clientaddr.sin_addr);
-      if (hostaddrp == NULL)
-        error("ERROR on inet_ntoa\n");
-      printf("server received datagram from %s (%s)\n", 
-       hostp->h_name, hostaddrp);
-      printf("server received %lu/%d bytes: %s\n", strlen(buf), n, buf);
-      
-      /* 
-       * sendto: echo the input back to the client 
-       */
-      n = sendto(sockfd, buf, strlen(buf), 0, 
-           (struct sockaddr *) &clientaddr, clientlen);
-      if (n < 0) 
-        error("ERROR in sendto");
+    
+    /* 
+     * sendto: echo the input back to the client 
+     */
+    for (int i = 0; i < windowSize; i += PACKET_SIZE) {
+      int seq = (currSeq + i) % MAX_SEQ;
+      if (timeouts[seq / PACKET_SIZE] == 0) {
+        // todo: send packet
+        timeouts[seq / PACKET_SIZE] = getCurrentTime() + TIMEOUT;
+      }
+    }
+    n = sendto(sockfd, buf, strlen(buf), 0, 
+         (struct sockaddr *) &clientaddr, clientlen);
+    if (n < 0) 
+      error("ERROR in sendto");
   }
 }
