@@ -95,7 +95,7 @@ int main(int argc, char **argv) {
     while(1) {
       bzero(buf, BUFSIZE);
       n = recvfrom(sockfd, buf, strlen(buf), MSG_DONTWAIT, (struct sockaddr *) &serveraddr, (socklen_t *) &serverlen);
-      if (n >= 0) {
+      if (n > 0) {
         server_isn = get4Bytes(buf, SEQ_NUM);
         printf("Receiving packet %d\n", server_isn);
         int synBit = getBit(buf, SYN);

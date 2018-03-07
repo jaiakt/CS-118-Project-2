@@ -2,6 +2,8 @@ CC=gcc
 CFLAGS=-I.
 DEPS = utilities.h
 
+build: server client
+
 %.o: %.c $(DEPS)
 	$(CC) -c -o $@ $< $(CFLAGS)
 

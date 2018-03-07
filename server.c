@@ -78,7 +78,7 @@ int main(int argc, char **argv) {
   const int PACKET_SIZE = 1024;
   const int HEADER_SIZE = 20;
   const int PAYLOAD_SIZE = PACKET_SIZE - HEADER_SIZE;
-  int windowSize = 5 * PACKET_SIZE;
+  unsigned int windowSize = 5 * PACKET_SIZE;
   const int MAX_SEQ = 30 * PACKET_SIZE;
   long timeouts[MAX_SEQ];
   long TIMEOUT = 500;
@@ -95,10 +95,12 @@ int main(int argc, char **argv) {
     if (n > 0) {
       if (getBit(buf, SYN) && !getBit(buf, ACK)) {
         setBit(buf, ACK, 1);
-        set4Bytes(buf, ACK_NUM, get4Bytes(buf, SEQ_NUM) + 1);
+        int temp = get4Bytes(buf, SEQ_NUM);
+        set4Bytes(buf, ACK_NUM, temp + 1);
         set4Bytes(buf, SEQ_NUM, randNum);
         n = sendto(sockfd, buf, strlen(buf), 0, 
          (struct sockaddr *) &clientaddr, clientlen);
+        printf("Sending packet %du %du SYN\n", SEQ_NUM, windowSize);
         if (n < 0) {
           error("error with sending syn-ack");
         }
@@ -131,9 +133,6 @@ int main(int argc, char **argv) {
     }
     // HANDLE TIMEOUTS
     
-    /* 
-     * sendto: echo the input back to the client 
-     */
     for (int i = 0; i < windowSize; i += PACKET_SIZE) {
       int seq = (currSeq + i) % MAX_SEQ;
       long currentTime = getCurrentTime();
@@ -141,7 +140,10 @@ int main(int argc, char **argv) {
         // todo: send packet
         timeouts[seq / PACKET_SIZE] = currentTime + TIMEOUT;
       }
-      if ()
+      else if (timeouts[seq / PACKET_SIZE] < currentTime) {
+        // todo: retransmit packet
+        timeouts[seq / PACKET_SIZE] = currentTime + TIMEOUT;
+      }
     }
     n = sendto(sockfd, buf, strlen(buf), 0, 
          (struct sockaddr *) &clientaddr, clientlen);
