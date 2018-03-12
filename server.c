@@ -13,6 +13,7 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <assert.h>
+#include <limits.h>
 #include "utilities.h"
 
 #define BUFSIZE 1024
@@ -23,6 +24,65 @@
 void error(char *msg) {
   perror(msg);
   exit(1);
+}
+// Networking stuff
+int sockfd;
+struct sockaddr_in clientaddr; /* client addr */
+unsigned int clientlen = sizeof(clientaddr);
+struct hostent *hostp; /* client host info */
+char *hostaddrp; /* dotted decimal host addr string */
+
+// Global buffer I use for input and output
+char buf[BUFSIZE];
+
+const int PACKET_SIZE = 1024;
+const int HEADER_SIZE = 20;
+const int PAYLOAD_SIZE = PACKET_SIZE - HEADER_SIZE;
+unsigned int windowSize = 5 * PACKET_SIZE;
+const int MAX_SEQ = 30 * PACKET_SIZE;
+long data[30][PAYLOAD_SIZE];
+char dataSet[30];
+unsigned long timeouts[30];
+long TIMEOUT = 500;
+
+void updateData(int oldSeq, int currSeq, FILE* fp) {
+  for (int i = oldSeq; i != currSeq; i = (i + PACKET_SIZE) % MAX_SEQ) {
+    dataSet[i / PACKET_SIZE] = 0;
+  }
+  for (int i = 0; i < windowSize; i += PACKET_SIZE) {
+    if (feof(fp)) {
+      break;
+    }
+    int seq = (currSeq + i) % MAX_SEQ;
+    int index = seq / PACKET_SIZE;
+    if (dataSet[index] == 0) {
+      fread(data[index], 1, PAYLOAD_SIZE, fp);
+      dataSet[index] = 1;
+    }
+  }
+}
+
+int inWindow(int currSeq, int seq) {
+  return (seq >= currSeq && (seq - currSeq) > 0 && (seq - currSeq) < windowSize) ||
+         (seq < currSeq && (seq + MAX_SEQ - currSeq) > 0 && (seq + MAX_SEQ - currSeq) < windowSize);
+}
+
+void sendPacket(int seq, int retransmit) {
+  int index = seq / PACKET_SIZE;
+  if (!dataSet[index]) {
+    return;
+  }
+  char retransmitStr[] = " Retransmission";
+  if (!retransmit) {
+    strcpy(retransmitStr, "");
+  }
+  printf("Sending packet %d %d%s\n", seq, windowSize, retransmitStr);
+  set4Bytes(buf, SEQ_NUM, seq);
+  memcpy(buf+HEADER_SIZE, data[index], PAYLOAD_SIZE);
+  int n = sendto(sockfd, buf, BUFSIZE, 0, 
+       (struct sockaddr *) &clientaddr, clientlen);
+  if (n < 0) 
+    error("Error in sendto");
 }
 
 int main(int argc, char **argv) {
@@ -41,7 +101,7 @@ int main(int argc, char **argv) {
   /* 
    * socket: create the parent socket 
    */
-  int sockfd = socket(AF_INET, SOCK_DGRAM, 0);
+  sockfd = socket(AF_INET, SOCK_DGRAM, 0);
   if (sockfd < 0) 
     error("ERROR opening socket");
 
@@ -73,24 +133,12 @@ int main(int argc, char **argv) {
   /* 
    * main loop: wait for a datagram, then echo it
    */
-  struct sockaddr_in clientaddr; /* client addr */
-  unsigned int clientlen = sizeof(clientaddr);
-  struct hostent *hostp; /* client host info */
-  char buf[BUFSIZE]; /* message buf */
-  char *hostaddrp; /* dotted decimal host addr string */
-  const int PACKET_SIZE = 1024;
-  const int HEADER_SIZE = 20;
-  const int PAYLOAD_SIZE = PACKET_SIZE - HEADER_SIZE;
-  unsigned int windowSize = 5 * PACKET_SIZE;
-  const int MAX_SEQ = 30 * PACKET_SIZE;
-  long timeouts[MAX_SEQ];
-  long TIMEOUT = 500;
-  for (int i = 0; i < MAX_SEQ; ++i) {
-    timeouts[i] = 0;
-  }
+  
   int cumSeq = 0;
   int currSeq;
   unsigned int randNum = rand() % 30;
+  char filename[128];
+  FILE* fp;
   while(1) {
     bzero(buf, BUFSIZE);
     int n = recvfrom(sockfd, buf, BUFSIZE, 0,
@@ -105,8 +153,9 @@ int main(int argc, char **argv) {
          (struct sockaddr *) &clientaddr, clientlen);
         printf("Sending packet %d %d SYN\n", SEQ_NUM, windowSize);
         if (n < 0) {
-          error("error with sending syn-ack");
+          error("Coult not send syn-ack.");
         }
+        strcpy(filename, buf+HEADER_SIZE);
       }
       else if (getBit(buf, ACK)) {
         currSeq = get4Bytes(buf, ACK_NUM);
@@ -118,9 +167,18 @@ int main(int argc, char **argv) {
   }
 
   // Handshake complete
-  return 0;
 
-  while (1) {
+  fp = fopen(filename, "r");
+  if (fp == NULL) {
+    error("Could not open file.");
+  }
+  for (int i = 0; i < 30; ++i) {
+    dataSet[i] = 0;
+    timeouts[i] = ULONG_MAX;
+  }
+
+  int done = false;
+  while (!done) {
     /*
      * recvfrom: receive a UDP datagram from a client
      */
@@ -136,26 +194,32 @@ int main(int argc, char **argv) {
       else if (getBit(buf, ACK)) {
         int seqNum = get4Bytes(buf, SEQ_NUM);
         timeouts[seqNum / PACKET_SIZE] = 0;
-        currSeq = get4Bytes(buf, ACK_NUM);
+        int oldSeq = currSeq;
+        int tempSeq = get4Bytes(buf, ACK_NUM);
+        if (inWindow(currSeq, tempSeq)) {
+          currSeq = tempSeq;
+          updateData(oldSeq, currSeq, fp);
+          if (!dataSet[currSeq / PACKET_SIZE]) {
+            done = true;
+          }
+        }
       }
     }
-    // HANDLE TIMEOUTS
+
+    // Handle timeouts
     
     for (int i = 0; i < windowSize; i += PACKET_SIZE) {
       int seq = (currSeq + i) % MAX_SEQ;
       long currentTime = getCurrentTime();
-      if (timeouts[seq / PACKET_SIZE] == 0) {
-        // todo: send packet
-        timeouts[seq / PACKET_SIZE] = currentTime + TIMEOUT;
-      }
-      else if (timeouts[seq / PACKET_SIZE] < currentTime) {
-        // todo: retransmit packet
+      if (timeouts[seq / PACKET_SIZE] < currentTime || timeouts[seq / PACKET_SIZE] == ULONG_MAX) {
+        int retransmit = timeouts[seq / PACKET_SIZE] < currentTime;
+        sendPacket(seq, retransmit);
         timeouts[seq / PACKET_SIZE] = currentTime + TIMEOUT;
       }
     }
-    n = sendto(sockfd, buf, BUFSIZE, 0, 
-         (struct sockaddr *) &clientaddr, clientlen);
-    if (n < 0) 
-      error("ERROR in sendto");
   }
+
+  // TODO: Handle shutdown procedure.
+
+  return 0;
 }
