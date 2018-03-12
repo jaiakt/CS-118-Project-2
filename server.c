@@ -177,11 +177,10 @@ int main(int argc, char **argv) {
     timeouts[i] = ULONG_MAX;
   }
 
-  int done = false;
+  updateData(currSeq, currSeq, fp);
+
+  int done = 0;
   while (!done) {
-    /*
-     * recvfrom: receive a UDP datagram from a client
-     */
     bzero(buf, BUFSIZE);
     int n = recvfrom(sockfd, buf, BUFSIZE, MSG_DONTWAIT,
 		 (struct sockaddr *) &clientaddr, &clientlen);
@@ -200,7 +199,7 @@ int main(int argc, char **argv) {
           currSeq = tempSeq;
           updateData(oldSeq, currSeq, fp);
           if (!dataSet[currSeq / PACKET_SIZE]) {
-            done = true;
+            done = 1;
           }
         }
       }
