@@ -104,7 +104,7 @@ void sendTimeouts(int currSeq) {
             int retransmit = timeouts[seq / PACKET_SIZE] < currentTime;
             sendPacket(seq, retransmit);
             if (retransmit) {
-                ssthresh = max(windowSize / 2, 2*PACKET_SIZE);
+                ssthresh = MAX(windowSize / 2, 2*PACKET_SIZE);
                 windowSize = PACKET_SIZE;
             }
             timeouts[seq / PACKET_SIZE] = currentTime + TIMEOUT;
@@ -249,7 +249,7 @@ int main(int argc, char * * argv) {
                 dups = 0;
             }
             if (dups >= 3) {
-                ssthresh = max(windowSize / 2, 2*PACKET_SIZE);
+                ssthresh = MAX(windowSize / 2, 2*PACKET_SIZE);
                 // Retransmit
                 printf("Sending packet %d %d %d Retransmission\n", currSeq, windowSize, ssthresh);
                 bzero(buf, BUFSIZE);
