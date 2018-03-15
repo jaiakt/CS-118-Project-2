@@ -3,6 +3,9 @@
 
 #include <time.h>
 
+#define MIN(X, Y) (((X) < (Y)) ? (X) : (Y))
+#define MAX(X, Y) (((X) > (Y)) ? (X) : (Y))
+
 #define PACKET_SIZE 1024
 #define HEADER_SIZE 20
 #define PAYLOAD_SIZE PACKET_SIZE - HEADER_SIZE
