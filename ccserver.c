@@ -36,14 +36,14 @@ char * hostaddrp; /* dotted decimal host addr string */
 // Global buffer I use for input and output
 char buf[BUFSIZE];
 
-unsigned int windowSize = 1024;
+int windowSize = 1024;
 char data[30][PAYLOAD_SIZE];
 char dataSet[30];
 unsigned long timeouts[30];
 long TIMEOUT = 500;
-unsigned int lastPacketSeq = -1;
-unsigned int lastPacketBytes = -1;
-unsigned int ssthresh = 15360;
+int lastPacketSeq = -1;
+int lastPacketBytes = -1;
+int ssthresh = 15360;
 FILE * fp;
 int dups = 0;
 int lastSeq = -1;
