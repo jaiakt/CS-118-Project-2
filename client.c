@@ -47,8 +47,6 @@ int main(int argc, char * * argv) {
     portno = atoi(argv[2]);
     filename = argv[3];
 
-    printf("hostname: %s\nportno: %d\nfilename: %s\n", hostname, portno, filename);
-
     sockfd = socket(AF_INET, SOCK_DGRAM, 0);
     if (sockfd < 0)
         error("ERROR opening socket");
@@ -141,7 +139,8 @@ int main(int argc, char * * argv) {
                 unsigned int windowSize = get2Bytes(buf, WINDOW);
                 if (inSeqNum == nextSeqNum) {
                     fwrite(buf + HEADER_SIZE, sizeof(char), n - HEADER_SIZE, fp);
-                    nextSeqNum = (nextSeqNum + PACKET_SIZE) % MAX_SEQ;
+                    nextSeqNum = nextSeqNum + PACKET_SIZE;
+                    nextSeqNum %= MAX_SEQ;
                     while (dataSet[nextSeqNum / PACKET_SIZE]) {
                         if (nextSeqNum != lastPacketSeq) {
                             fwrite(data[nextSeqNum / PACKET_SIZE], sizeof(char), PAYLOAD_SIZE, fp);
@@ -149,12 +148,14 @@ int main(int argc, char * * argv) {
                             fwrite(data[nextSeqNum / PACKET_SIZE], sizeof(char), lastPacketBytes, fp);
                         }
                         dataSet[nextSeqNum / PACKET_SIZE] = 0;
-                        nextSeqNum = (nextSeqNum + PACKET_SIZE) % MAX_SEQ;
+                        nextSeqNum = nextSeqNum + PACKET_SIZE;
+                        nextSeqNum %= MAX_SEQ;
                     }
                 } else if (inWindow(nextSeqNum, inSeqNum, windowSize)) {
                     memcpy(data[packetNum], buf + HEADER_SIZE, n - HEADER_SIZE);
                     dataSet[packetNum] = 1;
                 }
+                printf("Sending packet %d\n", nextSeqNum);
                 set4Bytes(buf, ACK_NUM, nextSeqNum);
                 setBit(buf, ACK, 1);
                 n = sendto(sockfd, buf, BUFSIZE, 0, (struct sockaddr * ) & serveraddr, serverlen);

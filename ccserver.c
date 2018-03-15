@@ -45,16 +45,20 @@ unsigned int lastPacketBytes = -1;
 unsigned int ssthresh = 15360;
 FILE * fp;
 int dups = 0;
+int lastSeq = -1;
 
 void updateData(int oldSeq, int currSeq, FILE * fp) {
-    for (int i = oldSeq; i != currSeq; i = (i + PACKET_SIZE) % MAX_SEQ) {
+    for (int i = oldSeq; i != currSeq; ) {
         dataSet[i / PACKET_SIZE] = 0;
+        i += PACKET_SIZE;
+        i %= MAX_SEQ;
     }
     for (int i = 0; i < windowSize; i += PACKET_SIZE) {
         if (feof(fp)) {
             break;
         }
-        int seq = (currSeq + i) % MAX_SEQ;
+        int seq = currSeq + i;
+        seq %= MAX_SEQ;
         int index = seq / PACKET_SIZE;
         if (dataSet[index] == 0) {
             int bytes = fread(data[index], 1, PAYLOAD_SIZE, fp);
@@ -98,7 +102,8 @@ void sendPacket(int seq, int retransmit) {
 
 void sendTimeouts(int currSeq) {
     for (int i = 0; i < windowSize; i += PACKET_SIZE) {
-        int seq = (currSeq + i) % MAX_SEQ;
+        int seq = currSeq + i;
+        seq %= MAX_SEQ;
         long currentTime = getCurrentTime();
         if (timeouts[seq / PACKET_SIZE] < currentTime || timeouts[seq / PACKET_SIZE] == ULONG_MAX) {
             int retransmit = timeouts[seq / PACKET_SIZE] < currentTime;
@@ -242,15 +247,18 @@ int main(int argc, char * * argv) {
             int seqNum = get4Bytes(buf, SEQ_NUM);
             timeouts[seqNum / PACKET_SIZE] = ULONG_MAX;
             int tempSeq = get4Bytes(buf, ACK_NUM);
-            if (currSeq == tempSeq) {
+            printf("Receiving packet %d\n", tempSeq);
+            if (lastSeq == tempSeq) {
                 dups += 1;
             }
             else if (inWindow(currSeq, tempSeq, windowSize)) {
                 dups = 0;
             }
+            lastSeq = tempSeq;
             if (dups >= 3) {
                 ssthresh = MAX(windowSize / 2, 2*PACKET_SIZE);
                 // Retransmit
+                currSeq = lastSeq;
                 printf("Sending packet %d %d %d Retransmission\n", currSeq, windowSize, ssthresh);
                 bzero(buf, BUFSIZE);
                 set4Bytes(buf, SEQ_NUM, currSeq);
