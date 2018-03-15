@@ -119,7 +119,7 @@ void sendTimeouts(int currSeq) {
 }
 
 void fastRecovery(int duplicateSeq, FILE* fp) {
-    windowSize = ssthresh + 3;
+    windowSize = ssthresh + 3*PACKET_SIZE;
     int seq = duplicateSeq;
     int timeout = getCurrentTime() + TIMEOUT;
     while(seq == duplicateSeq) {
