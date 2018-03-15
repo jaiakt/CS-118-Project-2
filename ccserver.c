@@ -286,13 +286,14 @@ int main(int argc, char * * argv) {
                 if (windowSize < MAX_WINDOW) {
                     if (windowSize < ssthresh) {
                         windowSize += PACKET_SIZE;
+                        winCounter = 0;
                     }
                     else {
                         winLow = (windowSize / PACKET_SIZE) * PACKET_SIZE;
                         winHigh = (windowSize / PACKET_SIZE + 1) * PACKET_SIZE;
                         winMax = windowSize / PACKET_SIZE;
                         ++winCounter;
-                        windowSize = winLow + ((winHigh - winLow) * winCounter) / winMax;
+                        windowSize = winLow + ((winHigh - winLow) / winMax * winCounter);
                         if (winCounter == winMax) {
                             winCounter = 0;
                         }
