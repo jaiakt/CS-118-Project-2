@@ -3,6 +3,11 @@
 
 #include <time.h>
 
+const int PACKET_SIZE = 1024;
+const int HEADER_SIZE = 20;
+const int PAYLOAD_SIZE = PACKET_SIZE - HEADER_SIZE;
+const int MAX_SEQ = 30 * PACKET_SIZE;
+
 // Header Offsets
 const int SOURCE_PORT = 0;
 const int DEST_PORT = 2;
@@ -71,6 +76,11 @@ void printHeader(char* buf) {
     }
     printf("\n");
   }
+}
+
+int inWindow(int currSeq, int seq, int windowSize) {
+  return (seq >= currSeq && (seq - currSeq) > 0 && (seq - currSeq) < windowSize) ||
+         (seq < currSeq && (seq + MAX_SEQ - currSeq) > 0 && (seq + MAX_SEQ - currSeq) < windowSize);
 }
 
 #endif

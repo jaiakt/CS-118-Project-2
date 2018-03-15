@@ -35,12 +35,8 @@ char *hostaddrp; /* dotted decimal host addr string */
 // Global buffer I use for input and output
 char buf[BUFSIZE];
 
-const int PACKET_SIZE = 1024;
-const int HEADER_SIZE = 20;
-const int PAYLOAD_SIZE = PACKET_SIZE - HEADER_SIZE;
 unsigned int windowSize = 5 * PACKET_SIZE;
-const int MAX_SEQ = 30 * PACKET_SIZE;
-long data[30][PAYLOAD_SIZE];
+char data[30][PAYLOAD_SIZE];
 char dataSet[30];
 unsigned long timeouts[30];
 long TIMEOUT = 500;
@@ -62,11 +58,6 @@ void updateData(int oldSeq, int currSeq, FILE* fp) {
   }
 }
 
-int inWindow(int currSeq, int seq) {
-  return (seq >= currSeq && (seq - currSeq) > 0 && (seq - currSeq) < windowSize) ||
-         (seq < currSeq && (seq + MAX_SEQ - currSeq) > 0 && (seq + MAX_SEQ - currSeq) < windowSize);
-}
-
 void sendPacket(int seq, int retransmit) {
   int index = seq / PACKET_SIZE;
   if (!dataSet[index]) {
@@ -78,11 +69,13 @@ void sendPacket(int seq, int retransmit) {
   }
   printf("Sending packet %d %d%s\n", seq, windowSize, retransmitStr);
   set4Bytes(buf, SEQ_NUM, seq);
+  set2Bytes(buf, WINDOW, windowSize / PACKET_SIZE);
   memcpy(buf+HEADER_SIZE, data[index], PAYLOAD_SIZE);
   int n = sendto(sockfd, buf, BUFSIZE, 0, 
        (struct sockaddr *) &clientaddr, clientlen);
-  if (n < 0) 
+  if (n < 0) {
     error("Error in sendto");
+  }
 }
 
 int main(int argc, char **argv) {
@@ -98,42 +91,24 @@ int main(int argc, char **argv) {
 
   int portno = atoi(argv[1]);
 
-  /* 
-   * socket: create the parent socket 
-   */
   sockfd = socket(AF_INET, SOCK_DGRAM, 0);
   if (sockfd < 0) 
     error("ERROR opening socket");
 
-  /* setsockopt: Handy debugging trick that lets 
-   * us rerun the server immediately after we kill it; 
-   * otherwise we have to wait about 20 secs. 
-   * Eliminates "ERROR on binding: Address already in use" error. 
-   */
   int optval = 1;
   setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, 
 	     (const void *)&optval , sizeof(int));
 
-  /*
-   * build the server's Internet address
-   */
   struct sockaddr_in serveraddr; /* server's addr */
   bzero((char *) &serveraddr, sizeof(serveraddr));
   serveraddr.sin_family = AF_INET;
   serveraddr.sin_addr.s_addr = htonl(INADDR_ANY);
   serveraddr.sin_port = htons((unsigned short)portno);
 
-  /* 
-   * bind: associate the parent socket with a port 
-   */
   if (bind(sockfd, (struct sockaddr *) &serveraddr, 
 	   sizeof(serveraddr)) < 0) 
     error("ERROR on binding");
 
-  /* 
-   * main loop: wait for a datagram, then echo it
-   */
-  
   int cumSeq = 0;
   int currSeq;
   unsigned int randNum = rand() % 30;
@@ -184,23 +159,16 @@ int main(int argc, char **argv) {
     bzero(buf, BUFSIZE);
     int n = recvfrom(sockfd, buf, BUFSIZE, MSG_DONTWAIT,
 		 (struct sockaddr *) &clientaddr, &clientlen);
-    if (n > 0) {
-      if (getBit(buf, SYN) && !getBit(buf, ACK)) {
-        setBit(buf, ACK, 1);
-        set4Bytes(buf, ACK_NUM, get4Bytes(buf, SEQ_NUM) + 1);
-        set4Bytes(buf, SEQ_NUM, 0);
-      }
-      else if (getBit(buf, ACK)) {
-        int seqNum = get4Bytes(buf, SEQ_NUM);
-        timeouts[seqNum / PACKET_SIZE] = 0;
-        int oldSeq = currSeq;
-        int tempSeq = get4Bytes(buf, ACK_NUM);
-        if (inWindow(currSeq, tempSeq)) {
-          currSeq = tempSeq;
-          updateData(oldSeq, currSeq, fp);
-          if (!dataSet[currSeq / PACKET_SIZE]) {
-            done = 1;
-          }
+    if (n > 0 && getBit(buf, ACK)) {
+      int seqNum = get4Bytes(buf, SEQ_NUM);
+      timeouts[seqNum / PACKET_SIZE] = ULONG_MAX;
+      int oldSeq = currSeq;
+      int tempSeq = get4Bytes(buf, ACK_NUM);
+      if (inWindow(currSeq, tempSeq, windowSize)) {
+        currSeq = tempSeq;
+        updateData(oldSeq, currSeq, fp);
+        if (!dataSet[currSeq / PACKET_SIZE]) {
+          done = 1;
         }
       }
     }
@@ -218,7 +186,7 @@ int main(int argc, char **argv) {
     }
   }
 
-  // TODO: Handle shutdown procedure.
+  // TODO: Handle shutdown procedure.  Can do by copying client.c handshake.
 
   return 0;
 }
