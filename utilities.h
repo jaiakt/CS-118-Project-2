@@ -61,7 +61,7 @@ void setBit(char buf[], const int bit, const char val) {
   }
 }
 
-long getCurrentTime() {
+unsigned long getCurrentTime() {
   struct timespec spec;
 
   clock_gettime(CLOCK_REALTIME, &spec);
