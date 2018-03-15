@@ -17,7 +17,7 @@
 #include "utilities.h"
 
 #define BUFSIZE 1024
-#define MAX_WINDOW (30 * PACKET_SIZE / 2)
+#define MAX_WINDOW (MAX_SEQ / 2)
 
 /*
  * error - wrapper for perror
