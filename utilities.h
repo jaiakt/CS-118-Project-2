@@ -5,8 +5,8 @@
 
 const int PACKET_SIZE = 1024;
 const int HEADER_SIZE = 20;
-const int PAYLOAD_SIZE = PACKET_SIZE - HEADER_SIZE;
-const int MAX_SEQ = 30 * PACKET_SIZE;
+const int PAYLOAD_SIZE = 1024 - 20;
+const int MAX_SEQ = 30 * 1024;
 
 // Header Offsets
 const int SOURCE_PORT = 0;
@@ -28,59 +28,59 @@ const int SYN = 4;
 const int FIN = 5;
 
 unsigned int get4Bytes(const char buf[], const int offset) {
-  unsigned int* ptr = (unsigned int *) (buf + offset);
-  return *ptr;
+    unsigned int* ptr = (unsigned int *) (buf + offset);
+    return *ptr;
 }
 
 void set4Bytes(char buf[], const int offset, const unsigned int val) {
-  unsigned int* ptr = (unsigned int *) (buf + offset);
-  *ptr = val;
+    unsigned int* ptr = (unsigned int *) (buf + offset);
+    *ptr = val;
 }
 
 short get2Bytes(const char buf[], const int offset) {
-  unsigned short* ptr = (unsigned short *) (buf + offset);
-  return *ptr;
+    unsigned short* ptr = (unsigned short *) (buf + offset);
+    return *ptr;
 }
 
 void set2Bytes(char buf[], const int offset, const unsigned short val) {
-  unsigned short* ptr = (unsigned short *) (buf + offset);
-  *ptr = val;
+    unsigned short* ptr = (unsigned short *) (buf + offset);
+    *ptr = val;
 }
 
 char getBit(const char buf[], const int bit) {
-  unsigned char control = buf[CONTROL];
-  return (control >> bit) & 1;
+    unsigned char control = buf[CONTROL];
+    return (control >> bit) & 1;
 }
 
 void setBit(char buf[], const int bit, const char val) {
-  if (val){
-    buf[CONTROL] |= (1 << bit);
-  }
-  else {
-    buf[CONTROL] &= (0xFFFFFFFF ^ (1 << bit));
-  }
+    if (val){
+        buf[CONTROL] |= (1 << bit);
+    }
+    else {
+        buf[CONTROL] &= (0xFFFFFFFF ^ (1 << bit));
+    }
 }
 
 unsigned long getCurrentTime() {
-  struct timespec spec;
+    struct timespec spec;
 
-  clock_gettime(CLOCK_REALTIME, &spec);
+    clock_gettime(CLOCK_REALTIME, &spec);
 
-  return (spec.tv_sec) * 1000 + (spec.tv_nsec) / 1000000 ;
+    return (spec.tv_sec) * 1000 + (spec.tv_nsec) / 1000000 ;
 }
 
 void printHeader(char* buf) {
-  for (int i = 0; i < 5; ++i) {
-    for (int j = 0; j < 4; ++j) {
-      printf("%hhx\t", buf[i*4 + j]);
+    for (int i = 0; i < 5; ++i) {
+        for (int j = 0; j < 4; ++j) {
+            printf("%hhx\t", buf[i*4 + j]);
+        }
+        printf("\n");
     }
-    printf("\n");
-  }
 }
 
 int inWindow(int currSeq, int seq, int windowSize) {
-  return (seq >= currSeq && (seq - currSeq) > 0 && (seq - currSeq) < windowSize) ||
-         (seq < currSeq && (seq + MAX_SEQ - currSeq) > 0 && (seq + MAX_SEQ - currSeq) < windowSize);
+    return (seq >= currSeq && (seq - currSeq) > 0 && (seq - currSeq) <= windowSize) ||
+                 (seq < currSeq && (seq + MAX_SEQ - currSeq) > 0 && (seq + MAX_SEQ - currSeq) <= windowSize);
 }
 
 #endif
