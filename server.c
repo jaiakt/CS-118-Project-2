@@ -40,6 +40,8 @@ char data[30][PAYLOAD_SIZE];
 char dataSet[30];
 unsigned long timeouts[30];
 long TIMEOUT = 500;
+unsigned int lastPacketSeq = -1;
+unsigned int lastPacketBytes = -1;
 
 void updateData(int oldSeq, int currSeq, FILE* fp) {
   for (int i = oldSeq; i != currSeq; i = (i + PACKET_SIZE) % MAX_SEQ) {
@@ -52,7 +54,11 @@ void updateData(int oldSeq, int currSeq, FILE* fp) {
     int seq = (currSeq + i) % MAX_SEQ;
     int index = seq / PACKET_SIZE;
     if (dataSet[index] == 0) {
-      fread(data[index], 1, PAYLOAD_SIZE, fp);
+      int bytes = fread(data[index], 1, PAYLOAD_SIZE, fp);
+      if (feof(fp)) {
+        lastPacketSeq = seq;
+        lastPacketBytes = bytes;
+      }
       dataSet[index] = 1;
     }
   }
@@ -71,10 +77,19 @@ void sendPacket(int seq, int retransmit) {
   set4Bytes(buf, SEQ_NUM, seq);
   set2Bytes(buf, WINDOW, windowSize / PACKET_SIZE);
   memcpy(buf+HEADER_SIZE, data[index], PAYLOAD_SIZE);
-  int n = sendto(sockfd, buf, BUFSIZE, 0, 
-       (struct sockaddr *) &clientaddr, clientlen);
-  if (n < 0) {
-    error("Error in sendto");
+  if (seq != lastPacketSeq) {
+    int n = sendto(sockfd, buf, BUFSIZE, 0, 
+         (struct sockaddr *) &clientaddr, clientlen);
+    if (n < 0) {
+      error("Error in sendto");
+    }
+  }
+  else {
+    int n = sendto(sockfd, buf, HEADER_SIZE+lastPacketBytes, 0, 
+         (struct sockaddr *) &clientaddr, clientlen);
+    if (n < 0) {
+      error("Error in sendto");
+    }
   }
 }
 
@@ -143,7 +158,7 @@ int main(int argc, char **argv) {
 
   // Handshake complete
 
-  fp = fopen(filename, "r");
+  fp = fopen(filename, "rb");
   if (fp == NULL) {
     error("Could not open file.");
   }
@@ -185,6 +200,8 @@ int main(int argc, char **argv) {
       }
     }
   }
+
+  fclose(fp);
 
   // TODO: Handle shutdown procedure.  Can do by copying client.c handshake.
 
