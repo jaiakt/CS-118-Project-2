@@ -17,6 +17,7 @@
 #include "utilities.h"
 
 #define BUFSIZE 1024
+#define MAX_WINDOW = 30 * PACKET_SIZE / 2
 
 /*
  * error - wrapper for perror
@@ -282,17 +283,19 @@ int main(int argc, char * * argv) {
             }
             int oldSeq = currSeq;
             if (inWindow(currSeq, tempSeq, windowSize)) {
-                if (windowSize < ssthresh) {
-                    windowSize += PACKET_SIZE;
-                }
-                else {
-                    winLow = (windowSize / PACKET_SIZE) * PACKET_SIZE;
-                    winHigh = (windowSize / PACKET_SIZE + 1) * PACKET_SIZE;
-                    winMax = windowSize / PACKET_SIZE;
-                    ++winCounter;
-                    windowSize = winLow + ((winHigh - winLow) * winCounter) / winMax;
-                    if (winCounter == winMax) {
-                        winCounter = 0;
+                if (windowSize < MAX_WINDOW) {
+                    if (windowSize < ssthresh) {
+                        windowSize += PACKET_SIZE;
+                    }
+                    else {
+                        winLow = (windowSize / PACKET_SIZE) * PACKET_SIZE;
+                        winHigh = (windowSize / PACKET_SIZE + 1) * PACKET_SIZE;
+                        winMax = windowSize / PACKET_SIZE;
+                        ++winCounter;
+                        windowSize = winLow + ((winHigh - winLow) * winCounter) / winMax;
+                        if (winCounter == winMax) {
+                            winCounter = 0;
+                        }
                     }
                 }
                 currSeq = tempSeq;
