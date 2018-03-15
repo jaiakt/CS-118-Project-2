@@ -3,29 +3,29 @@
 
 #include <time.h>
 
-const int PACKET_SIZE = 1024;
-const int HEADER_SIZE = 20;
-const int PAYLOAD_SIZE = 1024 - 20;
-const int MAX_SEQ = 30 * 1024;
+#define PACKET_SIZE 1024
+#define HEADER_SIZE 20
+#define PAYLOAD_SIZE PACKET_SIZE - HEADER_SIZE
+#define MAX_SEQ 30 * PACKET_SIZE
 
 // Header Offsets
-const int SOURCE_PORT = 0;
-const int DEST_PORT = 2;
-const int SEQ_NUM = 4;
-const int ACK_NUM = 8;
-const int DATA_OFFSET = 12;
-const int CONTROL = 13;
-const int WINDOW = 14;
-const int CHECKSUM = 16;
-const int URGENT_PTR = 18;
+#define SOURCE_PORT 0
+#define DEST_PORT 2
+#define SEQ_NUM 4
+#define ACK_NUM 8
+#define DATA_OFFSET 12
+#define CONTROL 13
+#define WINDOW 14
+#define CHECKSUM 16
+#define URGENT_PTR 18
 
 // Flags (bit offsets)
-const int URG = 0;
-const int ACK = 1;
-const int PSH = 2;
-const int RST = 3;
-const int SYN = 4;
-const int FIN = 5;
+#define URG 0
+#define ACK 1
+#define PSH 2
+#define RST 3
+#define SYN 4
+#define FIN 5
 
 unsigned int get4Bytes(const char buf[], const int offset) {
     unsigned int* ptr = (unsigned int *) (buf + offset);
