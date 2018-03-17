@@ -102,7 +102,7 @@ int main(int argc, char * * argv) {
         if (n > 0) {
             if (getBit(buf, FIN) == 1) {
                 printf("Received packet FIN\n");
-                printf("Sending packet ACK\n", seqNum);
+                printf("Sending packet ACK\n");
                 setBit(buf, ACK, 1);
                 int n = sendto(sockfd, buf, BUFSIZE, 0,
                     (struct sockaddr * ) & serveraddr, serverlen);
