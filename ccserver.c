@@ -338,7 +338,7 @@ int main(int argc, char * * argv) {
         }
     }
 
-    waitTill = getCurrentTime() + 2 * msl;
+    long waitTill = getCurrentTime() + 2 * msl;
 
     while (1) {
         int n = recvfrom(sockfd, buf, BUFSIZE, MSG_DONTWAIT,
