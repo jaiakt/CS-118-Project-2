@@ -141,7 +141,7 @@ int main(int argc, char * * argv) {
                 set4Bytes(buf, SEQ_NUM, randNum);
                 n = sendto(sockfd, buf, BUFSIZE, 0,
                     (struct sockaddr * ) & clientaddr, clientlen);
-                printf("Sending packet %d %d SYN\n", SEQ_NUM, windowSize);
+                printf("Sending packet %d %d SYN\n", randNum, windowSize);
                 if (n < 0) {
                     error("Coult not send syn-ack.");
                 }
