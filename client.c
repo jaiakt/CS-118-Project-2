@@ -101,10 +101,10 @@ int main(int argc, char * * argv) {
         n = recvfrom(sockfd, buf, BUFSIZE, MSG_DONTWAIT, (struct sockaddr * ) & serveraddr, (socklen_t * ) & serverlen);
         if (n > 0) {
             if (getBit(buf, FIN) == 1) {
-                printf("Sending packet %d ACK\n", currSeq);
+                printf("Sending packet %d ACK\n", seqNum);
                 setBit(buf, FIN, 1);
                 int n = sendto(sockfd, buf, BUFSIZE, 0,
-                    (struct sockaddr * ) & clientaddr, clientlen);
+                    (struct sockaddr * ) & serveraddr, serverlen);
                 break;
             }
             else if (getBit(buf, SYN) == 1) {
