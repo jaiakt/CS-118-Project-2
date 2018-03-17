@@ -259,6 +259,7 @@ int main(int argc, char * * argv) {
             if (dups >= 3) {
                 ssthresh = MAX(windowSize / 2, 2*PACKET_SIZE);
                 // Retransmit
+                updateData(currSeq, lastSeq, fp);
                 currSeq = lastSeq;
                 printf("Sending packet %d %d %d Retransmission\n", currSeq, windowSize, ssthresh);
                 bzero(buf, BUFSIZE);
