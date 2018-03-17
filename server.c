@@ -44,14 +44,17 @@ unsigned int lastPacketSeq = -1;
 unsigned int lastPacketBytes = -1;
 
 void updateData(int oldSeq, int currSeq, FILE * fp) {
-    for (int i = oldSeq; i != currSeq; i = (i + PACKET_SIZE) % MAX_SEQ) {
+    for (int i = oldSeq; i != currSeq; ) {
         dataSet[i / PACKET_SIZE] = 0;
+        i = i + PACKET_SIZE;
+        i %= MAX_SEQ;
     }
     for (int i = 0; i < windowSize; i += PACKET_SIZE) {
         if (feof(fp)) {
             break;
         }
-        int seq = (currSeq + i) % MAX_SEQ;
+        int seq = currSeq + i;
+        seq %= MAX_SEQ;
         int index = seq / PACKET_SIZE;
         if (dataSet[index] == 0) {
             int bytes = fread(data[index], 1, PAYLOAD_SIZE, fp);
@@ -211,7 +214,8 @@ int main(int argc, char * * argv) {
         // Handle timeouts
 
         for (int i = 0; i < windowSize; i += PACKET_SIZE) {
-            int seq = (currSeq + i) % MAX_SEQ;
+            int seq = currSeq + i;
+            seq %= MAX_SEQ;
             long currentTime = getCurrentTime();
             if (timeouts[seq / PACKET_SIZE] < currentTime || timeouts[seq / PACKET_SIZE] == ULONG_MAX) {
                 int retransmit = timeouts[seq / PACKET_SIZE] < currentTime;
