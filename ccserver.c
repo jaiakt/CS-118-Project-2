@@ -331,8 +331,9 @@ int main(int argc, char * * argv) {
             break;
         }
         else if (n > 0 && getBit(buf, FIN) == 1) {
+            printf("Received packet FIN\n");
             msl = getCurrentTime() - msl;
-            printf("Sending packet %d ACK\n", currSeq);
+            printf("Sending packet ACK\n");
             setBit(buf, FIN, 1);
             int n = sendto(sockfd, buf, BUFSIZE, 0,
                 (struct sockaddr * ) & clientaddr, clientlen);
@@ -347,7 +348,8 @@ int main(int argc, char * * argv) {
         int n = recvfrom(sockfd, buf, BUFSIZE, MSG_DONTWAIT,
             (struct sockaddr * ) & clientaddr, & clientlen);
         if (n > 0 && getBit(buf, FIN) == 1) {
-            printf("Sending packet %d ACK\n", currSeq);
+            printf("Received packet FIN\n");
+            printf("Sending packet ACK\n");
             setBit(buf, ACK, 1);
             int n = sendto(sockfd, buf, BUFSIZE, 0,
                 (struct sockaddr * ) & clientaddr, clientlen);
@@ -355,6 +357,7 @@ int main(int argc, char * * argv) {
             finReceived = 1;
         }
         if (finReceived == 1 && waitTill < getCurrentTime()) {
+            printf("Waited for 2*MSL.  Now shutting down...\n");
             break;
         }
     }
