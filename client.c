@@ -188,7 +188,7 @@ int main(int argc, char * * argv) {
 
     while (1) {
         int n = recvfrom(sockfd, buf, BUFSIZE, MSG_DONTWAIT,
-            (struct sockaddr * ) & clientaddr, & clientlen);
+            (struct sockaddr * ) & serveraddr, & serverlen);
         if (n > 0 && getBit(buf, ACK) == 1) {
             break;
         }
