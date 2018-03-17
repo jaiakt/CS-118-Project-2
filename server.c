@@ -220,14 +220,48 @@ int main(int argc, char * * argv) {
         }
     }
 
+    fclose(fp);
+
     printf("Sending packet %d FIN\n", currSeq);
     setBit(buf, FIN, 1);
     int n = sendto(sockfd, buf, BUFSIZE, 0,
         (struct sockaddr * ) & clientaddr, clientlen);
+    timeout = getCurrentTime() + TIMEOUT;
 
-    fclose(fp);
+    while (1) {
+        bzero(buf, BUFSIZE);
+        int n = recvfrom(sockfd, buf, BUFSIZE, MSG_DONTWAIT,
+            (struct sockaddr * ) & clientaddr, & clientlen);
+        if (n > 0 && getBit(buf, ACK) == 1) {
+            msl = getCurrentTime() - msl;
+            break;
+        }
+        else if (n > 0 && getBit(buf, FIN) == 1) {
+            msl = getCurrentTime() - msl;
+            printf("Sending packet %d ACK\n", currSeq);
+            setBit(buf, FIN, 1);
+            int n = sendto(sockfd, buf, BUFSIZE, 0,
+                (struct sockaddr * ) & clientaddr, clientlen);
+            break;
+        }
+    }
 
-    // TODO: Handle shutdown procedure.  Can do by copying client.c handshake.
+    waitTill = getCurrentTime() + 2 * msl;
+
+    while (1) {
+        int n = recvfrom(sockfd, buf, BUFSIZE, MSG_DONTWAIT,
+            (struct sockaddr * ) & clientaddr, & clientlen);
+        if (n > 0 && getBit(buf, FIN) == 1) {
+            printf("Sending packet %d ACK\n", currSeq);
+            setBit(buf, ACK, 1);
+            int n = sendto(sockfd, buf, BUFSIZE, 0,
+                (struct sockaddr * ) & clientaddr, clientlen);
+            waitTill = getCurrentTime() + 2 * msl;
+        }
+        if (waitTill < getCurrentTime()) {
+            break;
+        }
+    }
 
     return 0;
 }

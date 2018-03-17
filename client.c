@@ -101,6 +101,10 @@ int main(int argc, char * * argv) {
         n = recvfrom(sockfd, buf, BUFSIZE, MSG_DONTWAIT, (struct sockaddr * ) & serveraddr, (socklen_t * ) & serverlen);
         if (n > 0) {
             if (getBit(buf, FIN) == 1) {
+                printf("Sending packet %d ACK\n", currSeq);
+                setBit(buf, FIN, 1);
+                int n = sendto(sockfd, buf, BUFSIZE, 0,
+                    (struct sockaddr * ) & clientaddr, clientlen);
                 break;
             }
             else if (getBit(buf, SYN) == 1) {
@@ -177,7 +181,25 @@ int main(int argc, char * * argv) {
             timeout = getCurrentTime() + TIMEOUT;
         }
     }
-    // todo: FIN bit receieved
+
+    fclose(fp);
+
+    timeout = getCurrentTime() + TIMEOUT;
+
+    while (1) {
+        int n = recvfrom(sockfd, buf, BUFSIZE, MSG_DONTWAIT,
+            (struct sockaddr * ) & clientaddr, & clientlen);
+        if (n > 0 && getBit(buf, ACK) == 1) {
+            break;
+        }
+        if (timeout < getCurrentTime()) {
+            printf("Sending packet %d FIN\n", currSeq);
+            setBit(buf, FIN, 1);
+            n = sendto(sockfd, buf, BUFSIZE, 0,
+                (struct sockaddr * ) & clientaddr, clientlen);
+            timeout = getCurrentTime() + TIMEOUT;
+        }
+    }
 
     return 0;
 }
