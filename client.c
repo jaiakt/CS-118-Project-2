@@ -102,7 +102,7 @@ int main(int argc, char * * argv) {
         if (n > 0) {
             if (getBit(buf, FIN) == 1) {
                 printf("Sending packet %d ACK\n", seqNum);
-                setBit(buf, FIN, 1);
+                setBit(buf, ACK, 1);
                 int n = sendto(sockfd, buf, BUFSIZE, 0,
                     (struct sockaddr * ) & serveraddr, serverlen);
                 break;
@@ -184,7 +184,11 @@ int main(int argc, char * * argv) {
 
     fclose(fp);
 
-    timeout = getCurrentTime() + TIMEOUT;
+    timeout = getCurrentTime() + TIMEOUT/5;
+    printf("Sending packet %d FIN\n", seqNum);
+    setBit(buf, FIN, 1);
+    int n = sendto(sockfd, buf, BUFSIZE, 0,
+        (struct sockaddr * ) & serveraddr, serverlen);
 
     while (1) {
         int n = recvfrom(sockfd, buf, BUFSIZE, MSG_DONTWAIT,
@@ -197,7 +201,7 @@ int main(int argc, char * * argv) {
             setBit(buf, FIN, 1);
             n = sendto(sockfd, buf, BUFSIZE, 0,
                 (struct sockaddr * ) & serveraddr, serverlen);
-            timeout = getCurrentTime() + TIMEOUT;
+            timeout = getCurrentTime() + TIMEOUT/5;
         }
     }
 
