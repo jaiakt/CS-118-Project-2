@@ -228,6 +228,7 @@ int main(int argc, char * * argv) {
         (struct sockaddr * ) & clientaddr, clientlen);
     long timeout = getCurrentTime() + TIMEOUT;
     long msl = getCurrentTime();
+    int finReceived = 0;
 
     while (1) {
         bzero(buf, BUFSIZE);
@@ -243,6 +244,7 @@ int main(int argc, char * * argv) {
             setBit(buf, FIN, 1);
             int n = sendto(sockfd, buf, BUFSIZE, 0,
                 (struct sockaddr * ) & clientaddr, clientlen);
+            finReceived = 1;
             break;
         }
     }
@@ -258,8 +260,9 @@ int main(int argc, char * * argv) {
             int n = sendto(sockfd, buf, BUFSIZE, 0,
                 (struct sockaddr * ) & clientaddr, clientlen);
             waitTill = getCurrentTime() + 2 * msl;
+            finReceived = 1;
         }
-        if (waitTill < getCurrentTime()) {
+        if (finReceived == 1 && waitTill < getCurrentTime()) {
             break;
         }
     }
