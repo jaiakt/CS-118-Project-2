@@ -182,24 +182,7 @@ int main(int argc, char * * argv) {
             int tempSeq = get4Bytes(buf, ACK_NUM);
             printf("Receiving packet %d\n", tempSeq);
             if (currSeq == tempSeq) {
-                bzero(buf, BUFSIZE);
-                set4Bytes(buf, SEQ_NUM, currSeq);
-                set2Bytes(buf, WINDOW, windowSize / PACKET_SIZE);
-                memcpy(buf + HEADER_SIZE, data[currSeq / PACKET_SIZE], PAYLOAD_SIZE);
-                if (currSeq != lastPacketSeq) {
-                    int n = sendto(sockfd, buf, BUFSIZE, 0,
-                        (struct sockaddr * ) &clientaddr, clientlen);
-                    if (n < 0) {
-                        error("Error in sendto");
-                    }
-                }
-                else {
-                    int n = sendto(sockfd, buf, HEADER_SIZE + lastPacketBytes, 0,
-                        (struct sockaddr * ) &clientaddr, clientlen);
-                    if (n < 0) {
-                        error("Error in sendto");
-                    }
-                }
+                sendPacket(currSeq, 1);
             }
             int oldSeq = currSeq;
             if (inWindow(currSeq, tempSeq, windowSize)) {
