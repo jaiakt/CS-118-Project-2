@@ -226,7 +226,8 @@ int main(int argc, char * * argv) {
     setBit(buf, FIN, 1);
     int n = sendto(sockfd, buf, BUFSIZE, 0,
         (struct sockaddr * ) & clientaddr, clientlen);
-    timeout = getCurrentTime() + TIMEOUT;
+    long timeout = getCurrentTime() + TIMEOUT;
+    long msl = getCurrentTime();
 
     while (1) {
         bzero(buf, BUFSIZE);

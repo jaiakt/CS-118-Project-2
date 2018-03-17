@@ -318,6 +318,7 @@ int main(int argc, char * * argv) {
     int n = sendto(sockfd, buf, BUFSIZE, 0,
         (struct sockaddr * ) & clientaddr, clientlen);
     timeout = getCurrentTime() + TIMEOUT;
+    long msl = getCurrentTime();
 
     while (1) {
         bzero(buf, BUFSIZE);
