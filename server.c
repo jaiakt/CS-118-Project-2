@@ -177,6 +177,7 @@ int main(int argc, char * * argv) {
             int seqNum = get4Bytes(buf, SEQ_NUM);
             timeouts[seqNum / PACKET_SIZE] = ULONG_MAX;
             int tempSeq = get4Bytes(buf, ACK_NUM);
+            printf("Receiving packet %d\n", tempSeq);
             if (currSeq == tempSeq) {
                 bzero(buf, BUFSIZE);
                 set4Bytes(buf, SEQ_NUM, currSeq);
