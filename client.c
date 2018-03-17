@@ -27,7 +27,7 @@ char dataSet[30];
 
 int main(int argc, char * * argv) {
     int sockfd, portno, n;
-    int serverlen;
+    socklen_t serverlen;
     struct sockaddr_in serveraddr;
     struct hostent * server;
     char * hostname;
