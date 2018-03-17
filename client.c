@@ -187,7 +187,7 @@ int main(int argc, char * * argv) {
     timeout = getCurrentTime() + TIMEOUT/5;
     printf("Sending packet %d FIN\n", seqNum);
     setBit(buf, FIN, 1);
-    int n = sendto(sockfd, buf, BUFSIZE, 0,
+    n = sendto(sockfd, buf, BUFSIZE, 0,
         (struct sockaddr * ) & serveraddr, serverlen);
 
     while (1) {
