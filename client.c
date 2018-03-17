@@ -193,10 +193,10 @@ int main(int argc, char * * argv) {
             break;
         }
         if (timeout < getCurrentTime()) {
-            printf("Sending packet %d FIN\n", currSeq);
+            printf("Sending packet %d FIN\n", seqNum);
             setBit(buf, FIN, 1);
             n = sendto(sockfd, buf, BUFSIZE, 0,
-                (struct sockaddr * ) & clientaddr, clientlen);
+                (struct sockaddr * ) & serveraddr, serverlen);
             timeout = getCurrentTime() + TIMEOUT;
         }
     }
