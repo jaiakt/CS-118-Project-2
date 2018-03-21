@@ -284,7 +284,6 @@ int main(int argc, char * * argv) {
             }
             int oldSeq = currSeq;
             if (inWindow(currSeq, tempSeq, windowSize)) {
-                if (windowSize < MAX_WINDOW) {
                     if (windowSize < ssthresh) {
                         windowSize += PACKET_SIZE;
                         winCounter = 0;
@@ -299,7 +298,6 @@ int main(int argc, char * * argv) {
                             winCounter = 0;
                         }
                     }
-                }
                 currSeq = tempSeq;
                 updateData(oldSeq, currSeq, fp);
                 if (!dataSet[currSeq / PACKET_SIZE]) {
